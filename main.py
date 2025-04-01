@@ -18,6 +18,7 @@ from is_client import set_is_abaco_client, get_is_abaco_client
 
 #prepare_fine_tunning_data()
 import financebot
+import uvicorn
 agente = financebot.get_agent()
 get_agent_temperature = financebot.get_agent_temperature
 set_agent_temperature = financebot.set_agent_temperature
@@ -25,6 +26,9 @@ set_agent_temperature = financebot.set_agent_temperature
 interaction_history = []
 
 app = FastAPI()
+
+port = int(os.environ.get("PORT", 8080))
+uvicorn.run(app, host="0.0.0.0", port=port)
 
 temperatura_agente = get_agent_temperature()
 band_regenerar = False
@@ -43,11 +47,6 @@ class FeedbackData(BaseModel):
     feedback: str
 class ResponseData(BaseModel):
     response: str
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
 
 @app.post("/process", response_model=ResponseData)
 async def process_text(data: RequestData):
