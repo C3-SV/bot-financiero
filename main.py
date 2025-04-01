@@ -27,9 +27,6 @@ interaction_history = []
 
 app = FastAPI()
 
-port = int(os.environ.get("PORT", 8080))
-uvicorn.run(app, host="0.0.0.0", port=port)
-
 temperatura_agente = get_agent_temperature()
 band_regenerar = False
 status_cliente = False
