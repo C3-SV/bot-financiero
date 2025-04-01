@@ -14,6 +14,7 @@ dotenv
 faiss-cpu==1.7.4
 fastapi
 frozenlist
+google-cloud-secret-manager
 greenlet
 h11
 httpcore

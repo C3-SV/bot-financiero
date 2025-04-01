@@ -8,10 +8,12 @@ import json
 import faiss
 import numpy as np
 #INICIAL 
+from google.cloud import secretmanager
 # Configurar API de OpenAI
-from dotenv import load_dotenv
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
+client = secretmanager.SecretManagerServiceClient()
+secret_name = "projects/bot-financiero/secrets/API-key-OpenAI/versions/latest"
+secret_response = client.access_secret_version(name=secret_name)
+openai_api_key = secret_response.payload.data.decode("UTF-8")
 
 # Inicializar el cliente de OpenAI
 os.environ["OPENAI_API_KEY"] = openai_api_key
