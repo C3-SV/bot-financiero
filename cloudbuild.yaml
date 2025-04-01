@@ -1,16 +1,21 @@
 steps:
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$finance-bot/$REPO_NAME:$SHORT_SHA', '.']
+  - name: 'Install system dependencies'
+    image: 'debian:buster'
+    script: |
+      apt-get update
+      apt-get install -y --no-install-recommends build-essential cmake libopenblas-dev liblapack-dev
+
+  - name: 'Build and push image with Buildpacks'
+    image: 'gcr.io/buildpacks/builder:v1'
+    args:
+      - '--package'
+      - '.'
+      - '--builder'
+      - 'gcr.io/buildpacks/builder:v1'
+      - '--tag'
+      - 'gcr.io/bot-financiero/$REPO_NAME:$SHORT_SHA'
     env:
-      - 'finance-bot=$finance-bot'
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['run', 'deploy', '<finance-bot>',
-           '--image', 'gcr.io/$finance-bot/$REPO_NAME:$SHORT_SHA',
-           '--region', '<us-central1>',
-           '--platform', 'managed',
-           '--allow-unauthenticated']
-    env:
-      - 'finance-bot=$finance-bot'
+      - 'GOOGLE_CLOUD_PROJECT=bot-financiero'
 
 images:
-  - 'gcr.io/$finance-bot/$REPO_NAME:$SHORT_SHA'
+  - 'gcr.io/bot-financiero/$REPO_NAME:$SHORT_SHA'
