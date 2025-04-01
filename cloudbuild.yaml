@@ -1,21 +1,8 @@
 steps:
-  - name: 'Install system dependencies'
-    image: 'debian:buster'
-    script: |
-      apt-get update
-      apt-get install -y --no-install-recommends build-essential cmake libopenblas-dev liblapack-dev
-
-  - name: 'Build and push image with Buildpacks'
-    image: 'gcr.io/buildpacks/builder:v1'
-    args:
-      - '--package'
-      - '.'
-      - '--builder'
-      - 'gcr.io/buildpacks/builder:v1'
-      - '--tag'
-      - 'gcr.io/$finance-bot/$REPO_NAME:$SHORT_SHA'
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$finance-bot/$REPO_NAME:$SHORT_SHA', '.']
     env:
-      - 'GOOGLE_CLOUD_PROJECT=$finance-bot'
+      - 'finance-bot=$finance-bot'
 
 images:
   - 'gcr.io/$finance-bot/$REPO_NAME:$SHORT_SHA'
