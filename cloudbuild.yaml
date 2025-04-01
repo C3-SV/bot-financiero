@@ -1,4 +1,4 @@
-steps: 
+steps:
   - name: 'Install system dependencies'
     image: 'debian:buster'
     script: |
