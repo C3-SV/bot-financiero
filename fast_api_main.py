@@ -44,6 +44,11 @@ class FeedbackData(BaseModel):
 class ResponseData(BaseModel):
     response: str
 
+if __name__ == "__name__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
 @app.post("/process", response_model=ResponseData)
 async def process_text(data: RequestData):
     global band_regenerar, temperatura_agente
