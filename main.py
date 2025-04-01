@@ -1,6 +1,10 @@
 import os
 from openai import OpenAI as OpenAI
 
+from fastapi import FastAPI
+from pydantic import BaseModel
+import requests
+
 from langchain_community.chat_models import ChatOpenAI
 from langchain_community.llms import OpenAI as OpenAI
 from langchain.memory import ConversationBufferMemory
@@ -9,105 +13,95 @@ from langchain.prompts import PromptTemplate
 
 # Importar save_feedback
 from models.llm_config import save_feedback, prepare_fine_tunning_data
+from tools.abaco_platform.abaco_client_tool import set_empresa_id, cargar_datos_empresa_global
+from is_client import set_is_abaco_client, get_is_abaco_client
 
 #prepare_fine_tunning_data()
-
-from tools.abaco_platform.abaco_client_tool import set_empresa_id, cargar_datos_empresa_global
-
-# IMPLEMENTACION UNICAMENTE PARA TESTEO, REQUIERE MAS DESARROLLO
-from is_client import set_is_abaco_client, get_is_abaco_client
-#! AQUI SE DEFINE TODO LO RELACIONADO A CLIENTE O NO CLIENTE
-status_cliente = True
-# ESTA VARIABLE DEFINE EL COMPORTAMIENTO, SI ES CLIENTE O NO
-set_is_abaco_client(status_cliente)
-# AQUI SE DEFINE EL ID DE LA EMPRESA, SI ES CLIENTE
-empresa_id = "2-DistribuidoraComercialSur"
-# HAY 3 EMPRESAS DISPONIBLES
-# 1-TecnologiaInnovadora 
-# 2-DistribuidoraComercialSur
-# 3-ManufacturasIndustriales 
-#! EN EL 3, FALTA EL CASO DE UN CREDITO EN MORA, AGREGAR CONDICIONES ESPECIALES PARA ESTE CASO
-es_cliente = get_is_abaco_client()
-
-if es_cliente == True:
-    set_empresa_id(empresa_id)
-    cargar_datos_empresa_global()
-
 import financebot
+agente = financebot.get_agent()
 get_agent_temperature = financebot.get_agent_temperature
 set_agent_temperature = financebot.set_agent_temperature
-agente = financebot.get_agent() 
+
 interaction_history = []
 
-band_regenerar = False
+app = FastAPI()
+
 temperatura_agente = get_agent_temperature()
+band_regenerar = False
+status_cliente = False
+
 def regenerar_true():
     global band_regenerar
     band_regenerar = True
+
+class RequestData(BaseModel):
+    status_cliente: bool
+    empresa_id: str
+    text: str
+class FeedbackData(BaseModel):
+    interaction_id: int
+    feedback: str
+class ResponseData(BaseModel):
+    response: str
+
+if __name__ == "__name__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
+@app.post("/process", response_model=ResponseData)
+async def process_text(data: RequestData):
+    global band_regenerar, temperatura_agente
+    global status_cliente, empresa_id
+
+    status_cliente = data.status_cliente
+    if (status_cliente != get_is_abaco_client()):
+        print("El estado del cliente ha cambiado.")
+        set_is_abaco_client(status_cliente)
+        
+    agente = financebot.get_agent()
+
+    if status_cliente:
+        print("El cliente es un cliente de Abaco.")
+        empresa_id = data.empresa_id
+        set_empresa_id(empresa_id)
+        cargar_datos_empresa_global()
+
+    es_cliente = get_is_abaco_client()
+
+    response = agente.run(data.text)
+    interaction_history.append({"input": data.text, "response": response})
     
-def imprimir_respuesta(respuesta):
-    print("BOT: ", respuesta)
-    # REGENERAR Y FEEDBACK   
-    regenerar_respuesta = input("Regenerar? si o no: ").strip().lower() 
-    if regenerar_respuesta == "si":
-        regenerar_respuesta = True
-    else:
-        regenerar_respuesta = False
+    return ResponseData(response=response)
+
+@app.post("/feedback")
+async def provide_feedback(data: FeedbackData):
+    global temperatura_agente, band_regenerar
+    global status_cliente, empresa_id
     
-    if regenerar_respuesta:
-        global temperatura_agente
+    if data.interaction_id >= len(interaction_history):
+        return {"error": "Invalid interaction_id"}
+    
+    last_interaction = interaction_history[data.interaction_id]
+    user_input = last_interaction["input"]
+    last_response = last_interaction["response"]
+
+    if data.feedback.lower() == "regenerar":
         new_temp = temperatura_agente + 0.3
         set_agent_temperature(new_temp)
         regenerar_true()
-        return  
-   
-    # Mostrar opciones
-    print("Feedback: 'like', 'dislike'")
-    feedback = input("Retroalimentacion: ").strip().lower()
-    #! ESTA VARIABLE DEBE CAMBIARSE PARA SER TOMADA DEL MENSAJE DE LA API
-    # Si no tomo ninguna opcion 
-    if feedback not in ['like', 'dislike']:
-        return
-    # Like y Dislike
-    if feedback in ["like", "dislike"]:
-        last_interaction = interaction_history[-1]
-        last_input = last_interaction["input"]
-        last_response = last_interaction["response"] 
-        # Funcion de save_feedback en llm_config
-        save_feedback(last_input, last_response, feedback)
-        print(f"Retroalimentacion guardada: {feedback}")
-    
-    
-    
-def run_chatbot(): 
-    print(f"from main, ES CLIENTE ABACO: {es_cliente}")
-    print("Bienvenido al Chatbot Financiero de Abaco. ¿En qué puedo ayudarte?\nEscribe 'salir' para terminar.")
-    global band_regenerar
-    global temperatura_agente
-    band_regenerar = False
-    while True: 
-        if band_regenerar == True:
-            user_input = user_input
-            response = agente.run(user_input)
-            set_agent_temperature(temperatura_agente)
-            band_regenerar = False
-        else: 
-            user_input = input("User: ").strip()
-            if user_input.lower() == 'salir':
-                break
-            response = agente.run(user_input)
-        
-       
-        # Ejecutar agente 
-        
-        # NUEVA FUNCION
-        interaction_history.append({"input": user_input, "response": response})
-        imprimir_respuesta(response)
-        # Mostrar respuesta             
 
+        new_response =  agente.run(user_input)
 
-            
-            
-if __name__ == "__main__":
-    # Logica de cliente
-    run_chatbot()
+        set_agent_temperature(temperatura_agente)
+        band_regenerar = False
+
+        interaction_history[data.interaction_id]["response"] = new_response
+        return {"interaction_id": data.interaction_id, "new_response": new_response}
+
+    # like y dislike
+    if data.feedback.lower() in ["like", "dislike"]:
+        save_feedback(user_input, last_response, data.feedback)
+        return {"message": f"Retroalimentación '{data.feedback}' guardada."}
+    
+    return {"error": "Invalid feedback option"}
