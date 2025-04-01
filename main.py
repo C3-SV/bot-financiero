@@ -55,13 +55,11 @@ async def process_text(data: RequestData):
 
     status_cliente = data.status_cliente
     if (status_cliente != get_is_abaco_client()):
-        print("El estado del cliente ha cambiado.")
         set_is_abaco_client(status_cliente)
         
     agente = financebot.get_agent()
 
     if status_cliente:
-        print("El cliente es un cliente de Abaco.")
         empresa_id = data.empresa_id
         set_empresa_id(empresa_id)
         cargar_datos_empresa_global()
