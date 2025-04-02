@@ -8,12 +8,10 @@ import json
 import faiss
 import numpy as np
 #INICIAL 
-from google.cloud import secretmanager
 # Configurar API de OpenAI
-client = secretmanager.SecretManagerServiceClient()
-secret_name = "projects/bot-financiero/secrets/API-key-OpenAI/versions/latest"
-secret_response = client.access_secret_version(name=secret_name)
-openai_api_key = secret_response.payload.data.decode("UTF-8")
+from dotenv import load_dotenv
+load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Inicializar el cliente de OpenAI
 os.environ["OPENAI_API_KEY"] = openai_api_key
@@ -42,8 +40,6 @@ def get_standard_sys_msg():
 
     standard_msg = '''
 
-    No repitas la consulta del usuario.
-
     Presenta tu respuesta de manera ordenada y cohesiva usando markdown. Puedes reorganizar el orden de la información para mejorar la respuesta.
 
     Comienza con una sección de respuesta directa (sin mencionar respuesta directa en el título o en cualquier parte). Luego, presenta una sección detallada con toda la respuesta en estilo de puntos breves y que incluya todos los detalles. Termina con una conclusion y sugiere posible continuación a la pregunta. 
@@ -52,9 +48,6 @@ def get_standard_sys_msg():
 
     Usa encabezados y tablas para mejorar la organización. Procura incluir al menos una tabla (o varias tablas) en la sección de informe a menos que se indique lo contrario.
 
-    La respuesta debe ser completa y autónoma, ya que el usuario no tendrá acceso al rastro de pensamiento.
-
-    Debes responder en español.
     '''
     standard_msg = fecha_hora_string + standard_msg
     return standard_msg
@@ -69,23 +62,13 @@ def get_complement_sys_msg_client():
 
     IMPORTANTE: USA LA INFORMACION DISPONIBLE, CONSULTA LA FECHA ACTUAL Y USALO PARA CUALQUIER CONSULTA QUE ESTE RELACIONADA CON EL TIEMPO O FECHAS. Solo toma informacion en las fechas disponibles.
     
-    No repitas la consulta del usuario.
-
-    No menciones que la pregunta del usuario puede tener un error tipográfico a menos que sea muy claro. Considera la pregunta original del usuario como la fuente de verdad.
-
     Presenta tu respuesta de manera ordenada y cohesiva usando markdown. Puedes reorganizar el orden de la información para mejorar la respuesta.
 
     Comienza con una sección de respuesta directa (sin mencionar respuesta directa en el título o en cualquier parte). Luego, presenta una sección detallada con toda la respuesta en estilo de puntos breves y que incluya todos los detalles. Termina con una conclusion y sugiere posible continuación a la pregunta. 
 
     Usa encabezados y tablas si mejoran la organización. Procura incluir al menos una tabla (o varias tablas) a menos que se indique lo contrario.
-    
-    Prioriza usar tablas y recursos que complementen. 
-    
-    Prioriza agregar informacion especifica que haga personalizada la respuesta. 
-    
-    Agrega toda la informacion relevante. Puedes mencionar datos destacados e interesantes si existen y si complementan a la respuesta. 
-
-    Debes responder en español.
+        
+    USA EXCLUSIVAMENTE LA INFORMACION DISPONIBLE EN LA EMPRESA DEL CLIENTE PARA RESPONDER. NO AGREGUES REFERENCIAS A REGISTROS QUE NO EXISTEN.   
     '''
     standard_msg = fecha_hora_string + standard_msg
     return standard_msg
@@ -306,7 +289,7 @@ def get_client_chat_completion(prompt, general_answer=None, chat_history=None, e
         - Presenta la respuesta y elementos clave que la complementen. 
         - La respuesta debe ser detallada. Usar exactamente la informacion disponible de la empresa. 
         - Agrega ejemplos y datos relevantes.
-        - Indica que conoces la empresa, incluye referencias a la informacion. Genera personalizacion. 
+        - Incluye referencias a la informacion. Usa unicamente los registros existentes. No inventes algunos que no existen. 
         - SEPARA EN SECCIONES ORDENADAS, LOGICAS. Incluye TABLAS para mejorar LA ORGANIZACION DE LA INFORMACION NUMERICA. Usa LISTAS para LINEAS DE TEXTO O CONCEPTOS.
         - CONSIDERA LA FECHA Y HORA ACTUAL PARA TODO PROCESO QUE PREGUNTE POR FECHAS O PERIODOS DE TIEMPO ESPECIFICOS
         '''
