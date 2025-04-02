@@ -7,6 +7,7 @@ def set_is_abaco_client(state):
     print(f"From is_client, {is_abaco_client}")
     
 def get_is_abaco_client():
+    global is_abaco_client
     return is_abaco_client
 
 def get_is_client_string():
@@ -18,6 +19,5 @@ def get_is_client_string():
     base_str += "\n"
     print (base_str)
     return base_str
-
 
 
