@@ -34,6 +34,10 @@ def set_empresa_id(empresa_id: str):
     """Establece el ID de la empresa globalmente."""
     global empresa_id_global
     empresa_id_global = empresa_id.strip()
+    
+def get_empresa_id():
+    global empresa_id_global
+    return empresa_id_global
 
 def cargar_datos_empresa_global():
     """Carga los datos de la empresa una sola vez y los almacena globalmente."""
